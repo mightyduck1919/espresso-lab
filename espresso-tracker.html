@@ -1050,7 +1050,7 @@
       </div>
       <div class="chart-card">
         <h3>Pull Time Distribution</h3>
-        <canvas id="chart-time-dist"></canvas>
+        <div style="position:relative;height:220px;width:100%"><canvas id="chart-time-dist"></canvas></div>
       </div>
       <div class="chart-card full">
         <h3>Bitter &amp; Acidic — Avg Variable Comparison</h3>
@@ -1833,7 +1833,8 @@ function renderCharts() {
       datasets: [{ data: Object.values(bins), backgroundColor: CHART_COLORS.amber, borderRadius: 3 }]
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
+      responsive: true,
+      maintainAspectRatio: false,
       scales: { y: { ticks: { stepSize: 1 }, title: { display: true, text: 'Shots' } } },
       plugins: { legend: { display: false } }
     }
