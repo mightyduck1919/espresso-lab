@@ -34,27 +34,39 @@
     --border: #a8a49a;
     --border-light: #949088;
     --cream: #000000;
-    --cream-dim: #111111;
-    --cream-muted: #444444;
+    --cream-dim: #000000;
+    --cream-muted: #333333;
     --amber: #a04800;
     --amber-bright: #883c00;
     --amber-dim: #f5dfc0;
     --green: #1a5225;
     --red: #6e1818;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    color: #000000;
   }
 
   body, body * {
     transition: background-color 0.25s ease, border-color 0.25s ease, color 0.2s ease;
   }
 
-  body.light { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; }
-  body.light input, body.light select, body.light textarea, body.light button, body.light th, body.light td { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-  body.light .stat-value { color: #883c00; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-weight: 700; }
-  body.light .stat-label { color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-weight: 600; }
-  body.light .tab { color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 12px; letter-spacing: 0.05em; }
+  body.light * { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  body.light .header h1 { font-style: normal; font-weight: 700; font-size: 32px; }
+  body.light .stat-value { color: #883c00; font-weight: 700; }
+  body.light .stat-label { font-weight: 600; }
+  body.light .tab { font-size: 12px; letter-spacing: 0.05em; }
   body.light .tab.active { color: #883c00; border-bottom-color: #883c00; }
-  body.light .header h1 { color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-style: normal; font-weight: 700; }
-  body.light .stats-bar,
+  body.light label { font-weight: 600; }
+  body.light .badge-3 { color: #883c00; }
+  body.light .badge-2 { color: #1a5225; }
+  body.light .badge-1 { color: #6e1818; }
+  body.light .header-meta { color: #000000; border-left-color: #a8a49a; font-weight: 700; letter-spacing: 0.08em; }
+  body.light .header-meta span { font-weight: 700; }
+  body.light .theme-toggle { color: #000000; border-color: #666660; font-weight: 700; font-size: 12px; }
+  body.light .theme-toggle:hover { border-color: #883c00; color: #883c00; }
+  body.light .header .btn-secondary { color: #000000; border-color: #666660; font-weight: 700; font-size: 12px; }
+  body.light .header .btn-secondary:hover { border-color: #883c00; color: #883c00; }
+  body.light #refresh-status { color: #000000; font-weight: 600; }
   body.light .chart-card,
   body.light .config-section,
   body.light .bean-form-card,
@@ -62,12 +74,6 @@
   body.light .table-wrap,
   body.light #insights-output,
   body.light #setup-banner { border-width: 2px; }
-  body.light label { color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-weight: 600; }
-  body.light td, body.light th { color: #000000; }
-  body.light .cream-muted, body.light p { color: #333333; }
-  body.light .badge-3 { color: #883c00; }
-  body.light .badge-2 { color: #1a5225; }
-  body.light .badge-1 { color: #6e1818; }
   .theme-toggle {
     background: none;
     border: 1px solid var(--border-light);
@@ -113,9 +119,9 @@
 
   /* ── LAYOUT ── */
   .app {
-    max-width: 1100px;
+    max-width: 1400px;
     margin: 0 auto;
-    padding: 40px 24px 80px;
+    padding: 40px 32px 80px;
   }
 
   /* ── HEADER ── */
@@ -381,7 +387,7 @@
 
   th {
     background: var(--surface2);
-    padding: 12px 16px;
+    padding: 10px 14px;
     text-align: left;
     font-size: 10px;
     letter-spacing: 0.12em;
@@ -401,7 +407,7 @@
   th.sorted .sort-arrow { opacity: 1; color: var(--amber); }
 
   td {
-    padding: 12px 16px;
+    padding: 10px 14px;
     border-bottom: 1px solid var(--border);
     border-right: 1px solid var(--border);
     color: var(--cream-dim);
