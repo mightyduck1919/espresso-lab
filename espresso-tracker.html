@@ -517,8 +517,10 @@
     font-size: 10px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--cream-muted);
+    color: var(--cream-dim);
     margin-bottom: 16px;
+    text-align: center;
+    font-weight: 600;
   }
 
   .chart-card.full { grid-column: 1 / -1; }
@@ -1681,12 +1683,13 @@ const CHART_COLORS = {
   amberFill: 'rgba(200, 114, 26, 0.12)',
   green: 'rgba(74, 138, 90, 0.85)',
   red: 'rgba(138, 64, 64, 0.85)',
-  grid: 'rgba(58, 46, 38, 0.6)',
-  text: 'rgba(168, 154, 138, 0.8)'
+  grid: 'rgba(100, 88, 76, 0.4)',
+  text: 'rgba(220, 208, 188, 0.95)'
 };
 
 Chart.defaults.color = CHART_COLORS.text;
 Chart.defaults.borderColor = CHART_COLORS.grid;
+Chart.defaults.font = { size: 12 };
 
 function makeChart(id, config) {
   if (charts[id]) charts[id].destroy();
@@ -1826,6 +1829,7 @@ function renderCharts() {
     else if (s.time < 32) bins['28–32s']++;
     else bins['32s+']++;
   });
+  const maxBin = Math.max(...Object.values(bins), 3);
   makeChart('chart-time-dist', {
     type: 'bar',
     data: {
@@ -1835,7 +1839,14 @@ function renderCharts() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      scales: { y: { ticks: { stepSize: 1 }, title: { display: true, text: 'Shots' } } },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: maxBin,
+          ticks: { stepSize: 1, precision: 0 },
+          title: { display: true, text: 'Shots' }
+        }
+      },
       plugins: { legend: { display: false } }
     }
   });
