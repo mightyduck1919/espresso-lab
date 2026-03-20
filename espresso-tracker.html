@@ -746,16 +746,16 @@
       <div class="stat-label">Total Shots</div>
     </div>
     <div class="stat">
-      <div class="stat-value" id="stat-best">—</div>
-      <div class="stat-label">Avg Rating</div>
-    </div>
-    <div class="stat">
       <div class="stat-value" id="stat-avg-time">—</div>
       <div class="stat-label">Avg Pull Time</div>
     </div>
     <div class="stat">
-      <div class="stat-value" id="stat-beans">—</div>
-      <div class="stat-label">Beans Used</div>
+      <div class="stat-value" id="stat-avg-drip">—</div>
+      <div class="stat-label">Avg First Drip</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="stat-avg-grind">—</div>
+      <div class="stat-label">Avg Grind Size</div>
     </div>
   </div>
 
@@ -967,20 +967,29 @@
         <canvas id="chart-rating"></canvas>
       </div>
       <div class="chart-card">
-        <h3>Pull Time Distribution</h3>
-        <canvas id="chart-time"></canvas>
-      </div>
-      <div class="chart-card">
-        <h3>Grind Size vs. Rating</h3>
-        <canvas id="chart-grind"></canvas>
-      </div>
-      <div class="chart-card">
         <h3>Extraction Ratio Over Time</h3>
         <canvas id="chart-ratio"></canvas>
       </div>
+      <div class="chart-card">
+        <h3>Grind Size vs. Pull Time</h3>
+        <canvas id="chart-grind-time"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Grind Size vs. Time to First Drip</h3>
+        <canvas id="chart-grind-drip"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Tamp Pressure vs. Avg Pull Time</h3>
+        <canvas id="chart-tamp"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Pull Time Distribution</h3>
+        <canvas id="chart-time-dist"></canvas>
+      </div>
       <div class="chart-card full">
-        <h3>Tasting Notes Frequency</h3>
-        <canvas id="chart-tags"></canvas>
+        <h3>Bitter &amp; Acidic — Avg Variable Comparison</h3>
+        <p style="font-size:11px;color:var(--cream-muted);margin-bottom:14px;margin-top:-6px">Compares average grind, pull time, first drip, and extraction ratio across shots tagged Bitter, Acidic, or neither. Highlights which variables trend with each flavour defect.</p>
+        <canvas id="chart-flavor-drivers"></canvas>
       </div>
     </div>
   </div>
@@ -1544,16 +1553,17 @@ function updateStats() {
   document.getElementById('header-count').textContent = shots.length + ' shot' + (shots.length !== 1 ? 's' : '') + ' logged';
   document.getElementById('stat-total').textContent = shots.length;
 
-  const rated = shots.filter(s => s.rating);
-  const avgRating = rated.length ? (rated.reduce((a, b) => a + b.rating, 0) / rated.length).toFixed(1) : '—';
-  document.getElementById('stat-best').textContent = avgRating;
-
   const timed = shots.filter(s => s.time);
-  const avgTime = timed.length ? Math.round(timed.reduce((a, b) => a + b.time, 0) / timed.length) + 's' : '—';
-  document.getElementById('stat-avg-time').textContent = avgTime;
+  document.getElementById('stat-avg-time').textContent = timed.length
+    ? Math.round(timed.reduce((a, b) => a + parseFloat(b.time), 0) / timed.length) + 's' : '—';
 
-  const beanSet = beans.filter(b => !b.archived);
-  document.getElementById('stat-beans').textContent = beanSet.length || '—';
+  const dripped = shots.filter(s => s.drip);
+  document.getElementById('stat-avg-drip').textContent = dripped.length
+    ? Math.round(dripped.reduce((a, b) => a + parseFloat(b.drip), 0) / dripped.length) + 's' : '—';
+
+  const ground = shots.filter(s => s.grind);
+  document.getElementById('stat-avg-grind').textContent = ground.length
+    ? parseFloat((ground.reduce((a, b) => a + parseFloat(b.grind), 0) / ground.length).toFixed(1)) : '—';
 }
 
 // ═══════════════════════════════════════════
@@ -1588,7 +1598,7 @@ function renderCharts() {
     data: {
       labels: sorted.map(s => fmtDate(s.date)),
       datasets: [{
-        label: 'Rating (3=best)',
+        label: 'Rating',
         data: sorted.map(s => s.rating),
         borderColor: CHART_COLORS.amber,
         backgroundColor: CHART_COLORS.amberFill,
@@ -1605,59 +1615,15 @@ function renderCharts() {
     }
   });
 
-  // 2. Pull time histogram
-  const bins = { '<22': 0, '22-25': 0, '25-28': 0, '28-32': 0, '32+': 0 };
-  sorted.forEach(s => {
-    if (!s.time) return;
-    if (s.time < 22) bins['<22']++;
-    else if (s.time < 25) bins['22-25']++;
-    else if (s.time < 28) bins['25-28']++;
-    else if (s.time < 32) bins['28-32']++;
-    else bins['32+']++;
-  });
-  makeChart('chart-time', {
-    type: 'bar',
-    data: {
-      labels: Object.keys(bins),
-      datasets: [{
-        label: 'Shots',
-        data: Object.values(bins),
-        backgroundColor: CHART_COLORS.amber,
-        borderRadius: 2
-      }]
-    },
-    options: { plugins: { legend: { display: false } } }
-  });
-
-  // 3. Grind size vs avg rating (scatter)
-  const grindData = shots.filter(s => s.grind && s.rating).map(s => ({ x: s.grind, y: s.rating }));
-  makeChart('chart-grind', {
-    type: 'scatter',
-    data: {
-      datasets: [{
-        label: 'Grind vs Rating',
-        data: grindData,
-        backgroundColor: CHART_COLORS.amber
-      }]
-    },
-    options: {
-      scales: {
-        x: { title: { display: true, text: 'Grind Size' } },
-        y: { min: 0.5, max: 3.5, title: { display: true, text: 'Rating (3=best)' }, ticks: { stepSize: 1 } }
-      },
-      plugins: { legend: { display: false } }
-    }
-  });
-
-  // 4. Extraction ratio
+  // 2. Extraction ratio over time
   const ratioData = sorted.filter(s => s.in && s.out).map(s => ({
-    x: s.date,
+    x: fmtDate(s.date),
     y: parseFloat((s.out / s.in).toFixed(2))
   }));
   makeChart('chart-ratio', {
     type: 'line',
     data: {
-      labels: ratioData.map(d => fmtDate(d.x)),
+      labels: ratioData.map(d => d.x),
       datasets: [{
         label: 'Ratio',
         data: ratioData.map(d => d.y),
@@ -1671,24 +1637,151 @@ function renderCharts() {
     options: { plugins: { legend: { display: false } } }
   });
 
-  // 5. Tasting tags bar
-  const tagCount = {};
-  shots.forEach(s => s.tags.forEach(t => tagCount[t] = (tagCount[t] || 0) + 1));
-  const tagsSorted = Object.entries(tagCount).sort((a, b) => b[1] - a[1]);
-  makeChart('chart-tags', {
-    type: 'bar',
+  // 3. Grind size vs. pull time (scatter)
+  const grindTimeData = shots.filter(s => s.grind && s.time).map(s => ({ x: s.grind, y: s.time }));
+  makeChart('chart-grind-time', {
+    type: 'scatter',
     data: {
-      labels: tagsSorted.map(t => t[0]),
       datasets: [{
-        data: tagsSorted.map(t => t[1]),
+        label: 'Pull Time (s)',
+        data: grindTimeData,
         backgroundColor: CHART_COLORS.amber,
-        borderRadius: 2
+        pointRadius: 5
       }]
     },
     options: {
-      indexAxis: 'y',
-      plugins: { legend: { display: false } },
-      scales: { x: { ticks: { stepSize: 1 } } }
+      scales: {
+        x: { title: { display: true, text: 'Grind Size' } },
+        y: { title: { display: true, text: 'Pull Time (s)' } }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // 4. Grind size vs. time to first drip (scatter)
+  const grindDripData = shots.filter(s => s.grind && s.drip).map(s => ({ x: s.grind, y: s.drip }));
+  makeChart('chart-grind-drip', {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: 'First Drip (s)',
+        data: grindDripData,
+        backgroundColor: CHART_COLORS.green,
+        pointRadius: 5
+      }]
+    },
+    options: {
+      scales: {
+        x: { title: { display: true, text: 'Grind Size' } },
+        y: { title: { display: true, text: 'Time to First Drip (s)' } }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // 5. Tamp pressure vs. avg pull time (bar)
+  const tampGroups = {};
+  shots.forEach(s => {
+    if (!s.tamp || !s.time) return;
+    if (!tampGroups[s.tamp]) tampGroups[s.tamp] = [];
+    tampGroups[s.tamp].push(s.time);
+  });
+  const tampLabels = ['15 lbs', '25 lbs', '30 lbs', 'Manual'].filter(t => tampGroups[t]);
+  const tampAvgs = tampLabels.map(t => parseFloat((tampGroups[t].reduce((a, b) => a + b, 0) / tampGroups[t].length).toFixed(1)));
+  makeChart('chart-tamp', {
+    type: 'bar',
+    data: {
+      labels: tampLabels,
+      datasets: [
+        {
+          label: 'Avg Pull Time (s)',
+          data: tampAvgs,
+          backgroundColor: CHART_COLORS.amber,
+          borderRadius: 3
+        }
+      ]
+    },
+    options: {
+      scales: {
+        y: { title: { display: true, text: 'Avg Pull Time (s)' }, beginAtZero: false }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // 6. Pull time distribution
+  const bins = { '<22s': 0, '22–25s': 0, '25–28s': 0, '28–32s': 0, '32s+': 0 };
+  shots.forEach(s => {
+    if (!s.time) return;
+    if (s.time < 22) bins['<22s']++;
+    else if (s.time < 25) bins['22–25s']++;
+    else if (s.time < 28) bins['25–28s']++;
+    else if (s.time < 32) bins['28–32s']++;
+    else bins['32s+']++;
+  });
+  makeChart('chart-time-dist', {
+    type: 'bar',
+    data: {
+      labels: Object.keys(bins),
+      datasets: [{ data: Object.values(bins), backgroundColor: CHART_COLORS.amber, borderRadius: 3 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { y: { ticks: { stepSize: 1 }, title: { display: true, text: 'Shots' } } },
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // 7. Bitter & Acidic flavor driver comparison
+  const groups = { Bitter: [], Acidic: [], Neither: [] };
+  shots.forEach(s => {
+    const hasBitter = s.tags.includes('Bitter');
+    const hasAcidic = s.tags.includes('Acidic');
+    if (hasBitter) groups.Bitter.push(s);
+    if (hasAcidic) groups.Acidic.push(s);
+    if (!hasBitter && !hasAcidic) groups.Neither.push(s);
+  });
+
+  const avg = (arr, key) => {
+    const vals = arr.map(s => s[key]).filter(v => v !== '' && v != null && !isNaN(v));
+    return vals.length ? parseFloat((vals.reduce((a, b) => a + parseFloat(b), 0) / vals.length).toFixed(2)) : null;
+  };
+
+  const ratio = arr => {
+    const vals = arr.filter(s => s.in && s.out).map(s => s.out / s.in);
+    return vals.length ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2)) : null;
+  };
+
+  const flavorLabels = ['Avg Grind Size', 'Avg Pull Time (s)', 'Avg First Drip (s)', 'Avg Extraction Ratio'];
+  const bitterData  = [avg(groups.Bitter,  'grind'), avg(groups.Bitter,  'time'), avg(groups.Bitter,  'drip'), ratio(groups.Bitter)];
+  const acidicData  = [avg(groups.Acidic,  'grind'), avg(groups.Acidic,  'time'), avg(groups.Acidic,  'drip'), ratio(groups.Acidic)];
+  const neitherData = [avg(groups.Neither, 'grind'), avg(groups.Neither, 'time'), avg(groups.Neither, 'drip'), ratio(groups.Neither)];
+
+  makeChart('chart-flavor-drivers', {
+    type: 'bar',
+    data: {
+      labels: flavorLabels,
+      datasets: [
+        { label: 'Bitter',  data: bitterData,  backgroundColor: 'rgba(180,70,70,0.8)',  borderRadius: 3 },
+        { label: 'Acidic',  data: acidicData,  backgroundColor: 'rgba(70,140,180,0.8)', borderRadius: 3 },
+        { label: 'Neither', data: neitherData, backgroundColor: 'rgba(200,114,26,0.6)', borderRadius: 3 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { y: { beginAtZero: false } },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: { boxWidth: 12, padding: 16, color: CHART_COLORS.text }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y ?? 'no data'}`
+          }
+        }
+      }
     }
   });
 }
@@ -1764,13 +1857,20 @@ Be specific, reference the actual data, and keep advice practical. Write in a wa
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
+        model: 'claude-sonnet-4-5',
+        max_tokens: 1500,
         messages: [{ role: 'user', content: prompt }]
       })
     });
 
     const data = await res.json();
+
+    if (!res.ok) {
+      output.className = '';
+      output.textContent = `API error ${res.status}: ${data.error?.message || JSON.stringify(data)}`;
+      return;
+    }
+
     const text = data.content?.[0]?.text || 'No response received.';
 
     // Parse sections
