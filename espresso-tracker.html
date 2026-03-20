@@ -67,13 +67,78 @@
   body.light .header .btn-secondary { color: #000000; border-color: #666660; font-weight: 700; font-size: 12px; }
   body.light .header .btn-secondary:hover { border-color: #883c00; color: #883c00; }
   body.light #refresh-status { color: #000000; font-weight: 600; }
+  body.light .stats-bar,
   body.light .chart-card,
   body.light .config-section,
   body.light .bean-form-card,
   body.light .bean-card,
   body.light .table-wrap,
   body.light #insights-output,
+  body.light .chat-msg.assistant .chat-bubble,
   body.light #setup-banner { border-width: 2px; }
+  /* ── CHAT ── */
+  .chat-wrap {
+    display: flex;
+    flex-direction: column;
+    height: 600px;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 4px 0 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .chat-msg { display: flex; gap: 10px; }
+  .chat-msg.user { flex-direction: row-reverse; }
+
+  .chat-bubble {
+    max-width: 75%;
+    padding: 12px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+  }
+
+  .chat-msg.assistant .chat-bubble {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--cream);
+  }
+
+  .chat-msg.user .chat-bubble {
+    background: var(--amber-dim);
+    border: 1px solid var(--amber);
+    color: var(--cream);
+  }
+
+  .chat-msg.thinking .chat-bubble {
+    color: var(--cream-muted);
+    font-style: italic;
+  }
+
+  .chat-input-wrap {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+
+  .chat-input {
+    flex: 1;
+    resize: none;
+    min-height: 44px;
+    max-height: 120px;
+  }
+
+  body.light .chat-msg.assistant .chat-bubble { background: var(--surface2); border-color: var(--border); color: #000; }
+  body.light .chat-msg.user .chat-bubble { background: #fde8cc; border-color: #c8721a; color: #000; }
+
   .theme-toggle {
     background: none;
     border: 1px solid var(--border-light);
@@ -766,6 +831,7 @@
     <button class="tab" onclick="switchTab('beans')">Beans</button>
     <button class="tab" onclick="switchTab('charts')">Charts</button>
     <button class="tab" onclick="switchTab('insights')">AI Insights</button>
+    <button class="tab" onclick="switchTab('chat')">Chat</button>
     <button class="tab" onclick="switchTab('config')">Settings</button>
   </div>
 
@@ -1008,6 +1074,28 @@
   <!-- TAB: SETTINGS -->
   <div class="panel" id="panel-config">
     <div class="config-section">
+      <h3>Equipment Profile</h3>
+      <p style="color:var(--cream-muted);font-size:12px;margin-bottom:16px;">This info is automatically included as context in every Chat conversation.</p>
+      <div class="config-grid">
+        <div class="field">
+          <label>Espresso Machine</label>
+          <input type="text" id="cfg-machine" placeholder="e.g. Breville Barista Express">
+        </div>
+        <div class="field">
+          <label>Grinder</label>
+          <input type="text" id="cfg-grinder" placeholder="e.g. Niche Zero, Comandante">
+        </div>
+        <div class="field full">
+          <label>Other Notes</label>
+          <textarea id="cfg-equipment-notes" placeholder="e.g. water temp, pressure, any other setup details..." style="min-height:60px"></textarea>
+        </div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:10px;align-items:center">
+        <button class="btn-primary" onclick="saveEquipment()">Save Equipment</button>
+        <span id="equipment-status" class="save-status"></span>
+      </div>
+    </div>
+    <div class="config-section">
       <h3>Google Sheets Connection</h3>
       <div class="config-grid">
         <div class="field">
@@ -1040,6 +1128,22 @@
         <button class="btn-secondary" onclick="exportCSV()">Export CSV</button>
         <button class="btn-secondary" onclick="clearLocalData()">Clear Local Data</button>
       </div>
+    </div>
+  </div>
+
+  <!-- TAB: CHAT -->
+  <div class="panel" id="panel-chat">
+    <div class="chat-wrap">
+      <div class="chat-messages" id="chat-messages">
+        <div class="chat-msg assistant">
+          <div class="chat-bubble">Hi! I'm your espresso consultant. I have full access to your shot history, bean registry, and equipment profile. Ask me anything — dialling in a new bag, troubleshooting a bitter shot, what to try next.</div>
+        </div>
+      </div>
+      <div class="chat-input-wrap">
+        <textarea id="chat-input" class="chat-input" placeholder="Ask anything about your espresso..." rows="2" onkeydown="chatKeydown(event)"></textarea>
+        <button class="btn-primary" id="chat-send" onclick="sendChat()">Send</button>
+      </div>
+      <div style="font-size:10px;color:var(--cream-muted);margin-top:8px;letter-spacing:0.05em">Press Shift+Enter for new line · Enter to send</div>
     </div>
   </div>
 
@@ -1080,7 +1184,10 @@ let CONFIG = {
   sheetId: '',
   apiKey: '',
   scriptUrl: '',
-  claudeKey: ''
+  claudeKey: '',
+  machine: '',
+  grinder: '',
+  equipmentNotes: ''
 };
 
 // ═══════════════════════════════════════════
@@ -1123,7 +1230,7 @@ window.onload = () => {
 // ═══════════════════════════════════════════
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach((t, i) => {
-    const names = ['log', 'history', 'beans', 'charts', 'insights', 'config'];
+    const names = ['log', 'history', 'beans', 'charts', 'insights', 'chat', 'config'];
     t.classList.toggle('active', names[i] === name);
   });
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -1908,6 +2015,11 @@ function fillConfigFields() {
     if (el1) el1.value = CONFIG[key] || '';
     if (el2) el2.value = CONFIG[key] || '';
   });
+  if (document.getElementById('cfg-machine')) {
+    document.getElementById('cfg-machine').value = CONFIG.machine || '';
+    document.getElementById('cfg-grinder').value = CONFIG.grinder || '';
+    document.getElementById('cfg-equipment-notes').value = CONFIG.equipmentNotes || '';
+  }
 }
 
 function readConfigFields(prefix) {
@@ -1917,6 +2029,14 @@ function readConfigFields(prefix) {
     scriptUrl: document.getElementById(prefix + 'script-url')?.value.trim() || '',
     claudeKey: document.getElementById(prefix + 'claude-key')?.value.trim() || ''
   };
+}
+
+function saveEquipment() {
+  CONFIG.machine = document.getElementById('cfg-machine').value.trim();
+  CONFIG.grinder = document.getElementById('cfg-grinder').value.trim();
+  CONFIG.equipmentNotes = document.getElementById('cfg-equipment-notes').value.trim();
+  localStorage.setItem('espresso_config', JSON.stringify(CONFIG));
+  setStatus('equipment-status', '✓ Equipment saved', 'ok');
 }
 
 function saveConfig() {
@@ -1988,6 +2108,123 @@ function clearLocalData() {
     renderTable();
   }
 }
+
+// ═══════════════════════════════════════════
+// CHAT
+// ═══════════════════════════════════════════
+let chatHistory = [];
+
+function buildSystemPrompt() {
+  const equipment = [
+    CONFIG.machine ? `Espresso machine: ${CONFIG.machine}` : null,
+    CONFIG.grinder ? `Grinder: ${CONFIG.grinder}` : null,
+    CONFIG.equipmentNotes ? `Additional equipment notes: ${CONFIG.equipmentNotes}` : null
+  ].filter(Boolean).join('\n');
+
+  const beanSummary = beans.map(b => {
+    const days = b.roastDate ? daysOffRoast(b.roastDate) : null;
+    return `- ${b.roaster} — ${b.name} | ${b.roastLevel || 'unknown roast'} | roasted ${b.roastDate || 'unknown'} | ${days !== null ? days + 'd off roast' : ''} | ${b.origin || ''} ${b.archived ? '(archived)' : '(active)'}`;
+  }).join('\n') || 'No beans registered yet.';
+
+  const shotSummary = shots.slice(-30).map(s => {
+    const b = beans.find(x => x.id === s.beanId);
+    const dor = b?.roastDate ? daysOffRoast(b.roastDate, s.date) : null;
+    return `${fmtDate(s.date)} | ${s.beans} | grind:${s.grind} | in:${s.in}g out:${s.out}g | first drip:${s.drip}s | pull:${s.time}s | tamp:${s.tamp} | rating:${s.rating ? ['','★','★★','★★★'][s.rating] : '—'} | tags:${s.tags.join(',')||'none'} | ${dor !== null ? dor+'d off roast' : ''} | notes:${s.notes||'—'}`;
+  }).join('\n') || 'No shots logged yet.';
+
+  return `You are an expert espresso consultant and barista coach with deep knowledge of extraction science, grinder calibration, and shot dialling. You have full context about this user's setup and shot history.
+
+${equipment ? `EQUIPMENT:\n${equipment}\n` : ''}
+BEAN REGISTRY (${beans.length} bags):
+${beanSummary}
+
+RECENT SHOT HISTORY (last ${Math.min(shots.length, 30)} of ${shots.length} shots, ratings: ★=off ★★=decent ★★★=top tier):
+${shotSummary}
+
+Give practical, specific, actionable advice. Reference the actual data when relevant. Be conversational but expert. Keep responses concise unless a detailed explanation is needed.`;
+}
+
+function chatKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChat();
+  }
+}
+
+function appendMessage(role, text) {
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role}`;
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble';
+  bubble.textContent = text;
+  div.appendChild(bubble);
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return bubble;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  if (!CONFIG.claudeKey) {
+    appendMessage('assistant', 'Add your Claude API key in Settings to use the chat.');
+    return;
+  }
+
+  input.value = '';
+  appendMessage('user', text);
+  chatHistory.push({ role: 'user', content: text });
+
+  const thinkingBubble = appendMessage('assistant thinking', 'Thinking…');
+
+  const btn = document.getElementById('chat-send');
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CONFIG.claudeKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 1024,
+        system: buildSystemPrompt(),
+        messages: chatHistory
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      thinkingBubble.textContent = `Error ${res.status}: ${data.error?.message || 'Something went wrong.'}`;
+      thinkingBubble.parentElement.classList.remove('thinking');
+      chatHistory.pop();
+      btn.disabled = false;
+      return;
+    }
+
+    const reply = data.content?.[0]?.text || 'No response received.';
+    thinkingBubble.textContent = reply;
+    thinkingBubble.parentElement.classList.remove('thinking');
+    chatHistory.push({ role: 'assistant', content: reply });
+
+  } catch (e) {
+    thinkingBubble.textContent = 'Connection error. Check your API key and try again.';
+    thinkingBubble.parentElement.classList.remove('thinking');
+    chatHistory.pop();
+  }
+
+  btn.disabled = false;
+  document.getElementById('chat-messages').scrollTop = 99999;
+}
+
 </script>
 </body>
 </html>
