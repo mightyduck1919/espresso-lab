@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Espresso Lab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #0e0b08;
@@ -24,6 +24,61 @@
     --red: #8a4040;
     --mono: 'DM Mono', monospace;
     --serif: 'Cormorant Garamond', Georgia, serif;
+  }
+
+  body.light {
+    --bg: #eeebe4;
+    --surface: #f5f2ec;
+    --surface2: #ede9e1;
+    --surface3: #e4e0d8;
+    --border: #ccc8be;
+    --border-light: #b8b4aa;
+    --cream: #000000;
+    --cream-dim: #111111;
+    --cream-muted: #444444;
+    --amber: #a04800;
+    --amber-bright: #883c00;
+    --amber-dim: #f5dfc0;
+    --green: #1a5225;
+    --red: #6e1818;
+  }
+
+  body, body * {
+    transition: background-color 0.25s ease, border-color 0.25s ease, color 0.2s ease;
+  }
+
+  body.light { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; }
+  body.light input, body.light select, body.light textarea, body.light button, body.light th, body.light td { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  body.light .stat-value { color: #883c00; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-weight: 700; }
+  body.light .stat-label { color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-weight: 600; }
+  body.light .tab { color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 12px; letter-spacing: 0.05em; }
+  body.light .tab.active { color: #883c00; border-bottom-color: #883c00; }
+  body.light .header h1 { color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-style: normal; font-weight: 700; }
+  body.light label { color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-weight: 600; }
+  body.light td, body.light th { color: #000000; }
+  body.light .cream-muted, body.light p { color: #333333; }
+  body.light .badge-3 { color: #883c00; }
+  body.light .badge-2 { color: #1a5225; }
+  body.light .badge-1 { color: #6e1818; }
+  .theme-toggle {
+    background: none;
+    border: 1px solid var(--border-light);
+    border-radius: 20px;
+    color: var(--cream-muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 5px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .theme-toggle:hover {
+    border-color: var(--amber);
+    color: var(--cream);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -318,7 +373,7 @@
 
   th {
     background: var(--surface2);
-    padding: 10px 12px;
+    padding: 12px 16px;
     text-align: left;
     font-size: 10px;
     letter-spacing: 0.12em;
@@ -326,23 +381,27 @@
     color: var(--cream-muted);
     font-weight: 400;
     border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
     white-space: nowrap;
     cursor: pointer;
     user-select: none;
   }
 
+  th:last-child { border-right: none; }
   th:hover { color: var(--cream-dim); }
   th .sort-arrow { margin-left: 4px; opacity: 0.4; }
   th.sorted .sort-arrow { opacity: 1; color: var(--amber); }
 
   td {
-    padding: 10px 12px;
+    padding: 12px 16px;
     border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
     color: var(--cream-dim);
     white-space: nowrap;
     font-size: 12px;
   }
 
+  td:last-child { border-right: none; }
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: var(--surface2); }
 
@@ -460,19 +519,22 @@
   .stat:last-child { border-right: none; }
 
   .stat-value {
-    font-family: var(--serif);
-    font-size: 28px;
-    font-weight: 300;
-    color: var(--amber-bright);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: #f0a050;
     line-height: 1;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
+    letter-spacing: -0.5px;
   }
 
   .stat-label {
     font-size: 10px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--cream-muted);
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
   }
 
   /* ── CONFIG ── */
@@ -628,6 +690,11 @@
       Shot Tracking &amp; Analysis<br>
       <span id="header-count">0 shots logged</span>
     </div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+      <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">☀ Day</button>
+      <button class="btn-secondary" onclick="loadFromSheets()" title="Re-pulls all shots and beans from Google Sheets" style="font-size:10px;padding:7px 14px">↻ Sync from Sheets</button>
+      <span id="refresh-status" class="save-status" style="font-size:10px"></span>
+    </div>
   </div>
 
   <!-- SETUP BANNER -->
@@ -681,8 +748,8 @@
   <!-- TABS -->
   <div class="tabs">
     <button class="tab active" onclick="switchTab('log')">Log Shot</button>
+    <button class="tab" onclick="switchTab('history')">Shot History</button>
     <button class="tab" onclick="switchTab('beans')">Beans</button>
-    <button class="tab" onclick="switchTab('history')">History</button>
     <button class="tab" onclick="switchTab('charts')">Charts</button>
     <button class="tab" onclick="switchTab('insights')">AI Insights</button>
     <button class="tab" onclick="switchTab('config')">Settings</button>
@@ -852,8 +919,8 @@
         <option value="2">★★ Decent only</option>
         <option value="1">★ Off only</option>
       </select>
-      <button class="btn-secondary" onclick="loadFromSheets()">↻ Refresh from Sheets</button>
-      <span id="refresh-status" class="save-status"></span>
+      <button class="btn-secondary" onclick="loadFromSheets()" style="display:none"></button>
+      <span id="refresh-status-unused" style="display:none"></span>
     </div>
     <div class="table-wrap">
       <table>
@@ -970,6 +1037,21 @@ let selectedRating = null;
 let selectedTags = [];
 let charts = {};
 
+// Format YYYY-MM-DD → MM/DD/YYYY for display
+function fmtDate(d) {
+  if (!d) return '—';
+  const parts = d.split('-');
+  if (parts.length !== 3) return d;
+  return `${parts[1]}/${parts[2]}/${parts[0]}`;
+}
+
+// ── THEME ──
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  document.getElementById('theme-toggle').textContent = isLight ? '☽ Night' : '☀ Day';
+  localStorage.setItem('espresso_theme', isLight ? 'light' : 'dark');
+}
+
 // Config from localStorage
 let CONFIG = {
   sheetId: '',
@@ -984,6 +1066,12 @@ let CONFIG = {
 window.onload = () => {
   // Set today's date
   document.getElementById('f-date').value = new Date().toISOString().slice(0, 10);
+
+  // Load theme preference
+  if (localStorage.getItem('espresso_theme') === 'light') {
+    document.body.classList.add('light');
+    document.getElementById('theme-toggle').textContent = '☽ Night';
+  }
 
   // Load config
   const saved = localStorage.getItem('espresso_config');
@@ -1012,7 +1100,7 @@ window.onload = () => {
 // ═══════════════════════════════════════════
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach((t, i) => {
-    const names = ['log', 'beans', 'history', 'charts', 'insights', 'config'];
+    const names = ['log', 'history', 'beans', 'charts', 'insights', 'config'];
     t.classList.toggle('active', names[i] === name);
   });
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -1166,7 +1254,7 @@ function onBeanSelect() {
   document.getElementById('bp-roaster').textContent = b.roaster;
   document.getElementById('bp-roast-level').textContent = b.roastLevel || '';
   document.getElementById('bp-origin').textContent = b.origin || '';
-  document.getElementById('bp-days').innerHTML = daysBadge(days);
+  document.getElementById('bp-days').innerHTML = (b.roastDate ? `Roasted ${fmtDate(b.roastDate)} · ` : '') + daysBadge(days);
   preview.style.display = 'flex';
 }
 
@@ -1191,7 +1279,7 @@ function renderBeans() {
 function beanCardHTML(b) {
   const days = daysOffRoast(b.roastDate);
   const badge = daysBadge(days);
-  const meta = [b.roastLevel, b.origin, b.roastDate ? `Roasted ${b.roastDate}` : ''].filter(Boolean).join(' · ');
+  const meta = [b.roastLevel, b.origin, b.roastDate ? `Roasted ${fmtDate(b.roastDate)}` : ''].filter(Boolean).join(' · ');
   return `<div class="bean-card${b.archived ? ' archived' : ''}">
     <div class="bean-card-info">
       <div class="bean-card-name">${b.roaster} — ${b.name}</div>
@@ -1419,7 +1507,7 @@ function renderTable() {
   tbody.innerHTML = data.map(s => {
     const ratio = s.in && s.out ? (s.out / s.in).toFixed(2) : '—';
     return `<tr>
-      <td>${s.date}</td>
+      <td>${fmtDate(s.date)}</td>
       <td>${s.beans || '—'}</td>
       <td>${s.grind || '—'}</td>
       <td>${s.in || '—'}</td>
@@ -1484,7 +1572,7 @@ function renderCharts() {
   makeChart('chart-rating', {
     type: 'line',
     data: {
-      labels: sorted.map(s => s.date),
+      labels: sorted.map(s => fmtDate(s.date)),
       datasets: [{
         label: 'Rating (3=best)',
         data: sorted.map(s => s.rating),
@@ -1555,7 +1643,7 @@ function renderCharts() {
   makeChart('chart-ratio', {
     type: 'line',
     data: {
-      labels: ratioData.map(d => d.x),
+      labels: ratioData.map(d => fmtDate(d.x)),
       datasets: [{
         label: 'Ratio',
         data: ratioData.map(d => d.y),
