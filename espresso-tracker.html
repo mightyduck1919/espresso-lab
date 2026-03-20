@@ -643,7 +643,11 @@
         <label>Google API Key</label>
         <input type="text" id="cfg-api-key" placeholder="AIzaSy...">
       </div>
-      <div class="field full">
+      <div class="field">
+        <label>Apps Script URL (for writing data)</label>
+        <input type="text" id="cfg-script-url" placeholder="https://script.google.com/macros/s/...">
+      </div>
+      <div class="field">
         <label>Claude API Key (for AI Insights)</label>
         <input type="text" id="cfg-claude-key" placeholder="sk-ant-...">
       </div>
@@ -924,7 +928,11 @@
           <label>Google API Key</label>
           <input type="text" id="cfg2-api-key" placeholder="AIzaSy...">
         </div>
-        <div class="field full">
+        <div class="field">
+          <label>Apps Script URL (for writing data)</label>
+          <input type="text" id="cfg2-script-url" placeholder="https://script.google.com/macros/s/...">
+        </div>
+        <div class="field">
           <label>Claude API Key</label>
           <input type="text" id="cfg2-claude-key" placeholder="sk-ant-...">
         </div>
@@ -966,7 +974,7 @@ let charts = {};
 let CONFIG = {
   sheetId: '',
   apiKey: '',
-  clientId: '',
+  scriptUrl: '',
   claudeKey: ''
 };
 
@@ -1086,7 +1094,7 @@ async function submitShot() {
   saveLocal();
 
   // Try Google Sheets
-  if (CONFIG.sheetId && CONFIG.apiKey) {
+  if (CONFIG.scriptUrl) {
     const ok = await appendToSheet(shot);
     if (ok) {
       setStatus('form-status', '✓ Shot logged to Google Sheets', 'ok');
@@ -1276,40 +1284,35 @@ function makeBeanId(roaster, name, roastDate) {
   return [slug(roaster), slug(name), roastDate ? roastDate.replace(/-/g, '') : 'nodate'].join('--');
 }
 
+async function writeToSheet(sheetName, row) {
+  if (!CONFIG.scriptUrl) return false;
+  try {
+    const res = await fetch(CONFIG.scriptUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ sheet: sheetName, row })
+    });
+    const data = await res.json();
+    return data.success === true;
+  } catch { return false; }
+}
+
 async function appendToSheet(shot) {
-  if (!CONFIG.sheetId || !CONFIG.apiKey) return false;
   const row = [
     shot.date, shot.beanId, shot.grind, shot.in, shot.out,
     shot.out && shot.in ? (shot.out / shot.in).toFixed(2) : '',
     shot.drip, shot.time, shot.tamp,
     shot.rating, shot.tags.join(', '), shot.notes
   ];
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.sheetId}/values/Shots!A1:append?valueInputOption=USER_ENTERED&key=${CONFIG.apiKey}`;
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ values: [row] })
-    });
-    return res.ok;
-  } catch { return false; }
+  return writeToSheet('Shots', row);
 }
 
 async function appendBeanToSheet(bean) {
-  if (!CONFIG.sheetId || !CONFIG.apiKey) return false;
   const row = [
     bean.id, bean.roaster, bean.name, bean.roastLevel,
     bean.roastDate, bean.origin, bean.notes
   ];
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.sheetId}/values/Beans!A1:append?valueInputOption=USER_ENTERED&key=${CONFIG.apiKey}`;
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ values: [row] })
-    });
-    return res.ok;
-  } catch { return false; }
+  return writeToSheet('Beans', row);
 }
 
 async function loadFromSheets() {
@@ -1696,7 +1699,7 @@ Be specific, reference the actual data, and keep advice practical. Write in a wa
 // CONFIG
 // ═══════════════════════════════════════════
 function fillConfigFields() {
-  ['sheet-id', 'api-key', 'claude-key'].forEach(k => {
+  ['sheet-id', 'api-key', 'script-url', 'claude-key'].forEach(k => {
     const key = k.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
     const el1 = document.getElementById('cfg-' + k);
     const el2 = document.getElementById('cfg2-' + k);
@@ -1709,6 +1712,7 @@ function readConfigFields(prefix) {
   return {
     sheetId: document.getElementById(prefix + 'sheet-id')?.value.trim() || '',
     apiKey: document.getElementById(prefix + 'api-key')?.value.trim() || '',
+    scriptUrl: document.getElementById(prefix + 'script-url')?.value.trim() || '',
     claudeKey: document.getElementById(prefix + 'claude-key')?.value.trim() || ''
   };
 }
