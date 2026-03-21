@@ -78,6 +78,68 @@
   body.light #insights-output,
   body.light .chat-msg.assistant .chat-bubble,
   body.light #setup-banner { border-width: 2px; }
+  /* ── TIMER ── */
+  .timer-wrap {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .timer-display {
+    font-family: var(--mono);
+    font-size: 52px;
+    font-weight: 500;
+    color: var(--cream);
+    letter-spacing: 0.05em;
+    line-height: 1;
+    min-width: 160px;
+    text-align: center;
+    transition: color 0.2s;
+  }
+
+  .timer-display.running { color: var(--amber-bright); }
+  .timer-display.drip-marked { color: #6aba7a; }
+
+  .timer-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .timer-btn {
+    background: var(--surface3);
+    border: 1px solid var(--border-light);
+    border-radius: 3px;
+    color: var(--cream-muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .timer-btn:hover:not(:disabled) { color: var(--cream); border-color: var(--cream-muted); }
+  .timer-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .timer-btn.timer-start { border-color: var(--amber); color: var(--amber-bright); }
+  .timer-btn.timer-start:hover:not(:disabled) { background: var(--amber-dim); }
+  .timer-btn.timer-mark { border-color: var(--green); color: #6aba7a; }
+  .timer-btn.timer-mark:hover:not(:disabled) { background: rgba(74,138,90,0.15); }
+  .timer-btn.timer-stop { border-color: var(--red); color: #ba6060; }
+  .timer-btn.timer-stop:hover:not(:disabled) { background: rgba(138,64,64,0.15); }
+
+  body.light .timer-display { color: #000; }
+  body.light .timer-display.running { color: #a04800; }
+  body.light .timer-display.drip-marked { color: #1a5e2a; }
+  body.light .timer-wrap { border-width: 2px; }
+
   /* ── CHAT ── */
   .chat-wrap {
     display: flex;
@@ -872,8 +934,27 @@
         <input type="number" id="f-in" placeholder="e.g. 18" step="0.1" min="0">
       </div>
       <div class="field">
-        <label>Yield Out (grams)</label>
-        <input type="number" id="f-out" placeholder="e.g. 36" step="0.1" min="0">
+        <label>Tamp Pressure</label>
+        <select id="f-tamp">
+          <option value="">— select —</option>
+          <option>15 lbs</option>
+          <option>25 lbs</option>
+          <option>30 lbs</option>
+          <option>Manual</option>
+        </select>
+      </div>
+      <div class="field full">
+        <label>Shot Timer</label>
+        <div class="timer-wrap">
+          <div class="timer-display" id="timer-display">00.0</div>
+          <div class="timer-controls">
+            <button class="timer-btn timer-start" id="timer-start-btn" onclick="timerStart()">▶ Start</button>
+            <button class="timer-btn timer-mark" id="timer-mark-btn" onclick="timerMarkDrip()" disabled>Mark First Drip</button>
+            <button class="timer-btn timer-stop" id="timer-stop-btn" onclick="timerStop()" disabled>■ Stop</button>
+            <button class="timer-btn timer-reset" id="timer-reset-btn" onclick="timerReset()">↺ Reset</button>
+          </div>
+          <div id="timer-status" style="font-size:11px;color:var(--cream-muted);margin-top:6px;min-height:16px"></div>
+        </div>
       </div>
       <div class="field">
         <label>Time to First Drip (sec)</label>
@@ -884,14 +965,8 @@
         <input type="number" id="f-time" placeholder="e.g. 28" min="0">
       </div>
       <div class="field">
-        <label>Tamp Pressure</label>
-        <select id="f-tamp">
-          <option value="">— select —</option>
-          <option>15 lbs</option>
-          <option>25 lbs</option>
-          <option>30 lbs</option>
-          <option>Manual</option>
-        </select>
+        <label>Yield Out (grams)</label>
+        <input type="number" id="f-out" placeholder="e.g. 36" step="0.1" min="0">
       </div>
       <div class="field full">
         <label>Rating</label>
@@ -1281,6 +1356,7 @@ function clearForm() {
   document.querySelectorAll('.rating-btn').forEach(b => b.className = 'rating-btn');
   document.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('form-status').textContent = '';
+  timerReset();
 }
 
 async function submitShot() {
@@ -2124,8 +2200,86 @@ function clearLocalData() {
 }
 
 // ═══════════════════════════════════════════
-// CHAT
+// SHOT TIMER
 // ═══════════════════════════════════════════
+let timerInterval = null;
+let timerStart_ms = null;
+let timerDripTime = null;
+let timerRunning = false;
+
+function timerTick() {
+  const elapsed = (Date.now() - timerStart_ms) / 1000;
+  const secs = Math.floor(elapsed);
+  const tenths = Math.floor((elapsed - secs) * 10);
+  document.getElementById('timer-display').textContent =
+    String(secs).padStart(2, '0') + '.' + tenths;
+}
+
+function timerStart() {
+  if (timerRunning) return;
+  timerStart_ms = Date.now();
+  timerRunning = true;
+  timerDripTime = null;
+  timerInterval = setInterval(timerTick, 50);
+
+  const disp = document.getElementById('timer-display');
+  disp.className = 'timer-display running';
+
+  document.getElementById('timer-start-btn').disabled = true;
+  document.getElementById('timer-mark-btn').disabled = false;
+  document.getElementById('timer-stop-btn').disabled = false;
+  document.getElementById('timer-status').textContent = '';
+}
+
+function timerMarkDrip() {
+  if (!timerRunning || timerDripTime !== null) return;
+  const elapsed = (Date.now() - timerStart_ms) / 1000;
+  timerDripTime = parseFloat(elapsed.toFixed(1));
+  document.getElementById('f-drip').value = timerDripTime;
+  document.getElementById('timer-display').className = 'timer-display drip-marked';
+  document.getElementById('timer-status').textContent =
+    '✓ First drip marked at ' + timerDripTime + 's — stop when shot finishes';
+  document.getElementById('timer-mark-btn').disabled = true;
+}
+
+function timerStop() {
+  if (!timerRunning) return;
+  clearInterval(timerInterval);
+  timerRunning = false;
+
+  const elapsed = (Date.now() - timerStart_ms) / 1000;
+  const total = parseFloat(elapsed.toFixed(1));
+  document.getElementById('f-time').value = total;
+  document.getElementById('timer-display').className = 'timer-display';
+
+  const secs = Math.floor(total);
+  const tenths = Math.round((total - secs) * 10);
+  document.getElementById('timer-display').textContent =
+    String(secs).padStart(2, '0') + '.' + tenths;
+
+  document.getElementById('timer-start-btn').disabled = false;
+  document.getElementById('timer-mark-btn').disabled = true;
+  document.getElementById('timer-stop-btn').disabled = true;
+
+  const dripMsg = timerDripTime
+    ? ' · first drip at ' + timerDripTime + 's'
+    : ' · tap "Mark First Drip" next time';
+  document.getElementById('timer-status').textContent =
+    '✓ Shot logged: ' + total + 's total' + dripMsg;
+}
+
+function timerReset() {
+  clearInterval(timerInterval);
+  timerRunning = false;
+  timerStart_ms = null;
+  timerDripTime = null;
+  document.getElementById('timer-display').textContent = '00.0';
+  document.getElementById('timer-display').className = 'timer-display';
+  document.getElementById('timer-start-btn').disabled = false;
+  document.getElementById('timer-mark-btn').disabled = true;
+  document.getElementById('timer-stop-btn').disabled = true;
+  document.getElementById('timer-status').textContent = '';
+}
 let chatHistory = [];
 
 function buildSystemPrompt() {
