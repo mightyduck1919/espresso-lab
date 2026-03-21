@@ -78,6 +78,27 @@
   body.light #insights-output,
   body.light .chat-msg.assistant .chat-bubble,
   body.light #setup-banner { border-width: 2px; }
+  .bean-card.active-bag {
+    border-color: var(--amber);
+    background: var(--surface2);
+  }
+
+  .active-bag-badge {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--amber-bright);
+    background: var(--amber-dim);
+    border: 1px solid var(--amber);
+    border-radius: 2px;
+    padding: 2px 7px;
+    font-family: var(--mono);
+    white-space: nowrap;
+  }
+
+  body.light .bean-card.active-bag { border-color: #a04800; background: #fde8cc; }
+  body.light .active-bag-badge { color: #7a3000; background: #fde8cc; border-color: #a04800; }
+
   /* ── TIMER ── */
   .timer-wrap {
     background: var(--surface2);
@@ -1348,8 +1369,15 @@ function clearForm() {
     document.getElementById(id).value = '';
   });
   document.getElementById('f-date').value = new Date().toISOString().slice(0, 10);
-  document.getElementById('f-bean-id').value = '';
-  document.getElementById('bean-preview').style.display = 'none';
+  // Re-select active bean if one is set
+  const activeBag = beans.find(b => b.isActive && !b.archived);
+  if (activeBag) {
+    document.getElementById('f-bean-id').value = activeBag.id;
+    onBeanSelect();
+  } else {
+    document.getElementById('f-bean-id').value = '';
+    document.getElementById('bean-preview').style.display = 'none';
+  }
   document.getElementById('f-tamp').value = '';
   selectedRating = null;
   selectedTags = [];
@@ -1443,13 +1471,21 @@ function populateBeanDropdown() {
   const current = sel.value;
   sel.innerHTML = '<option value="">— select a bag —</option>';
   const active = beans.filter(b => !b.archived);
+  const activeBag = beans.find(b => b.isActive && !b.archived);
   active.forEach(b => {
     const opt = document.createElement('option');
     opt.value = b.id;
-    opt.textContent = `${b.roaster} — ${b.name}`;
+    const dateStr = b.roastDate ? ` (roasted ${fmtDate(b.roastDate)})` : '';
+    opt.textContent = `${b.roaster} — ${b.name}${dateStr}`;
     sel.appendChild(opt);
   });
-  if (current) sel.value = current;
+  // Re-select previous value, or auto-select active bag
+  if (current && active.find(b => b.id === current)) {
+    sel.value = current;
+  } else if (activeBag) {
+    sel.value = activeBag.id;
+    onBeanSelect();
+  }
   if (nudge) nudge.style.display = active.length ? 'none' : 'block';
 }
 
@@ -1490,9 +1526,13 @@ function beanCardHTML(b) {
   const days = daysOffRoast(b.roastDate);
   const badge = daysBadge(days);
   const meta = [b.roastLevel, b.origin, b.roastDate ? `Roasted ${fmtDate(b.roastDate)}` : ''].filter(Boolean).join(' · ');
-  return `<div class="bean-card${b.archived ? ' archived' : ''}">
+  const isActive = b.isActive && !b.archived;
+  return `<div class="bean-card${b.archived ? ' archived' : ''}${isActive ? ' active-bag' : ''}">
     <div class="bean-card-info">
-      <div class="bean-card-name">${b.roaster} — ${b.name}</div>
+      <div class="bean-card-name" style="display:flex;align-items:center;gap:8px">
+        ${b.roaster} — ${b.name}
+        ${isActive ? '<span class="active-bag-badge">● Active</span>' : ''}
+      </div>
       <div class="bean-card-meta">
         <span>${meta}</span>
         ${badge}
@@ -1500,6 +1540,7 @@ function beanCardHTML(b) {
       ${b.notes ? `<div style="font-size:11px;color:var(--cream-muted);margin-top:4px;font-style:italic">${b.notes}</div>` : ''}
     </div>
     <div class="bean-actions">
+      ${!isActive && !b.archived ? `<button class="btn-icon" onclick="setActiveBean('${b.id}')">Set Active</button>` : ''}
       <button class="btn-icon" onclick="editBean('${b.id}')">Edit</button>
       <button class="btn-icon" onclick="toggleArchiveBean('${b.id}')">${b.archived ? 'Unarchive' : 'Archive'}</button>
     </div>
@@ -1526,7 +1567,8 @@ function saveBean() {
     roastDate,
     origin: document.getElementById('bf-origin').value.trim(),
     notes: document.getElementById('bf-notes').value.trim(),
-    archived: false
+    archived: false,
+    isActive: isNew && beans.filter(b => !b.archived).length === 0
   };
   const idx = beans.findIndex(b => b.id === id);
   if (idx >= 0) { bean.archived = beans[idx].archived; beans[idx] = bean; }
@@ -1568,9 +1610,22 @@ function cancelBeanEdit() {
   document.getElementById('bean-form-status').textContent = '';
 }
 
+function setActiveBean(id) {
+  beans.forEach(b => b.isActive = (b.id === id));
+  saveBeansLocal();
+  populateBeanDropdown();
+  renderBeans();
+}
+
 function toggleArchiveBean(id) {
   const b = beans.find(x => x.id === id);
-  if (b) { b.archived = !b.archived; saveBeansLocal(); populateBeanDropdown(); renderBeans(); }
+  if (b) {
+    b.archived = !b.archived;
+    if (b.archived) b.isActive = false;
+    saveBeansLocal();
+    populateBeanDropdown();
+    renderBeans();
+  }
 }
 
 // ═══════════════════════════════════════════
