@@ -1294,8 +1294,12 @@ let CONFIG = {
 // INIT
 // ═══════════════════════════════════════════
 window.onload = () => {
-  // Set today's date
-  document.getElementById('f-date').value = new Date().toISOString().slice(0, 10);
+  // Set today's date in local timezone
+  const now = new Date();
+  const localDate = now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0');
+  document.getElementById('f-date').value = localDate;
 
   // Load theme preference
   if (localStorage.getItem('espresso_theme') === 'light') {
@@ -1368,7 +1372,10 @@ function clearForm() {
   ['f-date', 'f-grind', 'f-in', 'f-out', 'f-time', 'f-drip', 'f-notes'].forEach(id => {
     document.getElementById(id).value = '';
   });
-  document.getElementById('f-date').value = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  document.getElementById('f-date').value = now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0');
   // Re-select active bean if one is set
   const activeBag = beans.find(b => b.isActive && !b.archived);
   if (activeBag) {
